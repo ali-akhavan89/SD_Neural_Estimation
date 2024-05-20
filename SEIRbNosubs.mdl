@@ -1,0 +1,557 @@
+{UTF-8}
+********************************************************
+	.seirb-ready
+********************************************************~
+		<?xml version="1.0" encoding="UTF-8"?>
+		<richtext version="1.0.0.0" xmlns="http://www.wxwidgets.org">
+		  <paragraphlayout textcolor="#000000" fontpointsize="9" fontfamily="70" \
+		fontstyle="90" fontweight="400" fontunderlined="0" fontface="Segoe UI" \
+		alignment="1" parspacingafter="10" parspacingbefore="0" linespacing="10" \
+		margin-left="5,4098" margin-right="5,4098" margin-top="5,4098" \
+		margin-bottom="5,4098">
+		    <paragraph>
+		      <text></text>
+		    </paragraph>
+		  </paragraphlayout>
+		</richtext>
+	|
+
+Indicated Death Rate[States]=
+	Simulated Death Rate Data/Population*Normalized population size[States]
+	~	Person/Day
+	~	Note that the "Data" for deaths is driving the risk perception (because \
+		that is what largely influenced public perception of risk)
+	|
+
+Simulated Onset Data=
+	(1+RANDOM NORMAL(-1, 1 , 0 , 1, NSeed)*Onset Measurement Noise Scale )*onset[s1]
+	~	Person/Day
+	~		|
+
+Patient Zero Arrival Time=
+	20
+	~	Day [0,200]
+	~	The day on which the first infected person appears in the model.
+	|
+
+Death Measurement Noise Scale=
+	0.1
+	~	dmnl [0,0.3]
+	~		|
+
+death rate[States]=
+	removing[States]*IFR
+	~	Person/Day
+	~		|
+
+PWRisk Gamma=
+	2
+	~	dmnl
+	~	"Death risk diminishing impact"
+	|
+
+Simulated Death Rate Data=
+	(1+RANDOM NORMAL(-1, 1 , 0 , 1, NSeed)*Death Measurement Noise Scale )*death rate[s1\
+		]
+	~	Person/Day
+	~		|
+
+Recovery Measurement Noise Scale=
+	0.1
+	~	dmnl [0,0.3]
+	~		|
+
+recovery rate[States]=
+	removing[States]*(1-IFR)
+	~	Person/Day
+	~		|
+
+IFR=
+	0.01
+	~	dmnl [0,0.04,0.0005]
+	~	The fraction of infections that result in fatality.
+	|
+
+Impact of perceived risk on attack rate[States]=
+	1/(1+("death rate perceived (lagged death rate)"[States]*Sensitivity to death Alpha)\
+		^PWRisk Gamma)
+	~	dmnl
+	~		|
+
+"Indicated Attack Rate (Transmission intensity)"[States]=
+	Transmission intensity Beta*Impact of perceived risk on attack rate[States]
+	~	1/Day
+	~		|
+
+Time to reduce risk=
+	50
+	~	Day
+	~		|
+
+Time to Perceive Risk[States]=
+	(if then else(Indicated Death Rate[States]>"death rate perceived (lagged death rate)"\
+		[States],
+	Time to perceive Tp,Time to reduce risk))
+	~	Day
+	~		|
+
+Simulated Recovery Data=
+	(1+RANDOM NORMAL(-1, 1 , 0 , 1, NSeed)*Recovery Measurement Noise Scale )*recovery rate\
+		[s1]
+	~	Person/Day
+	~		|
+
+Susceptible Fraction[States]=
+	S[States]/(Population-Dead[States])
+	~	dmnl
+	~	The fraction of the total population that is susceptible to disease - the \
+		denominator reflects the complete population less the cumulative deaths.
+	|
+
+Transmission intensity Beta=
+	0.5
+	~	1/Day [0,5,0.05]
+	~		|
+
+S[States]= INTEG (
+	-exposure[States],
+		Population -1)
+	~	Person
+	~	Population of individuals susceptible to the disease - mutually exclusive \
+		of both exposed and infected individuals.
+	|
+
+Onset Measurement Noise Scale=
+	0.1
+	~	dmnl [0,0.3]
+	~		|
+
+Sensitivity to death Alpha=
+	1
+	~	Day/Person [0,2,0.01]
+	~	Hazhir estimates Alpha=0.14 for death in million..
+	|
+
+Time to perceive Tp=
+	30
+	~	Day [0,100,5]
+	~	7
+	|
+
+Parameter Upper Bounds[Params]=
+	0.01, 100, 4, 5, 400, 100, 100
+	~	
+	~		|
+
+AutoCrr Noise 1[States]= INTEG (
+	Change in Auto Noise 1[States],
+		0)
+	~	Dimensionless
+	~	Pink Noise is first-order autocorrelated noise.  Pink noise provides a realistic \
+		noise input to
+		        models in which the next random shock depends in part on the previous \
+		shocks.  The user
+		        can specify the correlation time.  The mean is 0 and the standard deviation \
+		is specified
+		         by the user.
+	|
+
+Change in Auto Noise 1[States]=
+	(White Noise 1[States] - AutoCrr Noise 1[States])/Noise Correlation Time 1
+	~	1/Day
+	~	Change in the pink noise value; Pink noise is a first order exponential smoothing \
+		delay of the white
+		         noise input.
+	|
+
+Noise Correlation Time 1=
+	10
+	~	Day [1,20]
+	~	The correlation time constant for Pink Noise.
+	|
+
+ProcessNoiseExposure[States]=
+	Max(0,Min(2,1+Switch for process noise*AutoCrr Noise 1[States]))
+	~	dmnl
+	~		|
+
+NSeed=
+	1
+	~	dmnl
+	~		|
+
+White Noise 1[States]=
+	Noise Standard Deviation 1*((2-TIME STEP/Noise Correlation Time 1)/(TIME STEP/Noise Correlation Time 1\
+		))^0.5*RANDOM NORMAL(-10, 10 , 0 , 1 , NSeed )
+	~	Dimensionless
+	~	White noise input to the pink noise process.
+	|
+
+Noise Standard Deviation 1=
+	0.05
+	~	Dimensionless [0,1]
+	~	The standard deviation of the pink noise process.
+	|
+
+Dead[States]= INTEG (
+	death rate[States],
+		0)
+	~	Person
+	~		|
+
+"death rate perceived (lagged death rate)"[States]= INTEG (
+	(Indicated Death Rate[States]-"death rate perceived (lagged death rate)"[States])/Time to Perceive Risk\
+		[States],
+		Indicated Death Rate[States])
+	~	Person/Day
+	~		|
+
+E[States]= INTEG (
+	exposure[States]-onset[States]+Patient Zero Arrival[States],
+		0)
+	~	Person
+	~		|
+
+exposure[States]=
+	I[States]*"Indicated Attack Rate (Transmission intensity)"[States]*Susceptible Fraction\
+		[States]*ProcessNoiseExposure[States]
+	~	Person/Day
+	~		|
+
+I[States]= INTEG (
+	-death rate[States]+onset[States]-recovery rate[States],
+		0)
+	~	Person
+	~	The population currently infected with the disease.
+	|
+
+Normalized Estimated Parameters[Params]=
+	1,0.002,0.23,0.4,0.23,0.14,0.33
+	~	
+	~		|
+
+Normalized population size[States]=
+	1e+06
+	~	Person
+	~	The
+	|
+
+onset[States]=
+	E[States]/"Time to onset (Te)"[States]*Onset DATA WRONG HELP[States]
+	~	Person/Day
+	~		|
+
+Onset DATA WRONG HELP[States]=
+	1
+	~	dmnl
+	~	CURRENTLY DIMENSIONLESS AND WRONG
+	|
+
+Parameter Lower Bounds[Params]=
+	0.003,0.01,0.1,0,10, 1, 0
+	~	
+	~		|
+
+Params:
+	IFRt, SnsTDth, TrnInts, PWRskMlt, TmRdRsk, TmPrc, Ptn0Arr
+	~	
+	~		|
+
+Patient zero[States]=
+	1
+	~	Person
+	~	The first person who is infected (can be increased such that more than one \
+		person at a time arrive).
+	|
+
+Patient Zero Arrival[States]=
+	if then else ( Time 
+	                  < Patient Zero Arrival Time 
+	                  :AND: Time 
+	                       + TIME STEP 
+	                       >= Patient Zero Arrival Time, 
+	             Patient zero[States] 
+	                  / TIME STEP , 
+	             0)
+	~	Person/Day
+	~	Rate of increase in exposed individuals due to infected individuals \
+		entering the system.
+	|
+
+Population=
+	1e+06
+	~	Person
+	~	99,1;99,1; Total population - set equal to an initial constant. This is \
+		not endogenously growing or declining.
+	|
+
+Recovered[States]= INTEG (
+	recovery rate[States],
+		0)
+	~	Person
+	~	Population that has had and then subsequently recovered from infection.
+	|
+
+removing[States]=
+	I[States]/"Time to removal (Tr)"[States]
+	~	Person/Day
+	~		|
+
+States:
+	s1
+	~	
+	~	Subscript representing the 50 US States. DC excluded
+	|
+
+Switch for process noise=
+	1
+	~	dmnl [0,1,1]
+	~		|
+
+"Time to onset (Te)"[States]=
+	4
+	~	Day [0,10,1]
+	~	The number of days after exposure at which infection begins
+	|
+
+"Time to removal (Tr)"[States]=
+	10
+	~	Day
+	~		|
+
+********************************************************
+	.Control
+********************************************************~
+		Simulation Control Parameters
+	|
+
+FINAL TIME  = 600
+	~	Day
+	~	The final time for the simulation.
+	|
+
+INITIAL TIME  = 0
+	~	Day
+	~	The initial time for the simulation.
+	|
+
+SAVEPER  = 1
+	~	Day [0,?]
+	~	The frequency with which output is stored.
+	|
+
+TIME STEP  = 0.25
+	~	Day [0,?]
+	~	The time step for the simulation.
+	|
+
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*View 1
+$192-192-192,0,Arial|11||0-0-0|0-0-0|0-0-255|255-255-255|255-255-255|96,96,74,0
+10,1,S,577,461,40,20,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,2,E,901,463,40,20,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,3,I,1170,461,40,16,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,4,Recovered,1479,367,40,20,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,5,7,2,4,0,0,22,0,0,0,-1--1--1,,1|(801,462)|
+1,6,7,1,100,0,0,22,0,0,0,-1--1--1,,1|(673,462)|
+11,7,0,736,462,6,8,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,8,exposure,736,479,31,9,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,9,11,3,4,0,0,22,0,0,0,-1--1--1,,1|(1088,462)|
+1,10,11,2,100,0,0,22,0,0,0,-1--1--1,,1|(987,462)|
+11,11,0,1040,462,6,8,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,12,onset,1040,479,20,9,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,13,1,45,1,0,43,0,0,128,0,-1--1--1,,1|(573,511)|
+10,14,Transmission intensity Beta,681,839,62,30,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|||255-0-0,0,0,0,0,0,0
+1,15,2,11,1,0,43,0,0,128,0,-1--1--1,,1|(1027,430)|
+10,16,"Time to onset (Te)",1016,343,46,16,8,3,0,2,0,0,0,0,0-0-0,0-0-0,|||0-128-0,0,0,0,0,0,0
+10,17,"Time to removal (Tr)",1592,454,42,16,8,3,0,2,0,0,0,0,0-0-0,0-0-0,|||0-128-0,0,0,0,0,0,0
+1,18,16,11,1,0,45,0,0,128,0,-1--1--1,,1|(1047,416)|
+10,19,IFR,1206,561,13,9,8,3,0,2,0,0,0,0,0-0-0,0-0-0,|||255-0-0,0,0,0,0,0,0
+1,20,19,36,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,21,"death rate perceived (lagged death rate)",1109,718,53,30,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,22,Impact of perceived risk on attack rate,934,665,61,31,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+1,23,21,22,1,0,0,0,0,128,0,-1--1--1,,1|(1048,708)|
+10,24,Time to perceive Tp,1158,854,75,23,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|||255-0-0,0,0,0,0,0,0
+10,25,Sensitivity to death Alpha,820,829,49,23,8,131,0,2,-1,0,0,0,0-0-0,0-0-0,|||255-0-0,0,0,0,0,0,0
+1,26,25,22,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,27,3,8,1,0,43,0,0,64,0,-1--1--1,,1|(997,524)|
+10,28,Dead,1483,530,40,16,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,29,31,4,4,0,0,22,0,0,0,-1--1--1,,1|(1400,366)|
+1,30,31,3,100,0,0,22,0,0,0,-1--1--1,,1|(1170,366)|
+11,31,0,1355,366,6,8,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,32,recovery rate,1355,383,44,9,40,131,0,0,-1,0,0,0,0,0,0,0,0,0
+1,33,35,28,4,0,0,22,0,0,0,-1--1--1,,1|(1393,535)|
+1,34,35,3,100,0,0,22,0,0,0,-1--1--1,,1|(1170,535)|
+11,35,0,1338,535,6,30,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,36,death rate,1338,552,35,9,40,131,0,0,-1,0,0,0,0,0,0,0,0,0
+10,37,removing,1376,455,31,9,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,38,3,37,0,0,43,0,0,64,0,-1--1--1,,1|(0,0)|
+1,39,17,37,0,0,45,0,0,64,0,-1--1--1,,1|(0,0)|
+1,40,37,32,1,0,43,0,0,128,0,-1--1--1,,1|(1395,420)|
+1,41,37,35,1,0,43,0,0,128,0,-1--1--1,,1|(1384,487)|
+10,42,IFR,1304,306,21,9,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,43,42,31,0,0,45,0,0,128,0,-1--1--1,,1|(0,0)|
+10,44,"Indicated Attack Rate (Transmission intensity)",796,582,62,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,45,Susceptible Fraction,599,547,39,16,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,46,22,44,1,0,43,0,0,128,0,-1--1--1,,1|(868,640)|
+1,47,14,44,1,0,43,0,0,128,0,-1--1--1,,1|(682,710)|
+1,48,45,8,1,0,43,0,0,128,0,-1--1--1,,1|(675,547)|
+10,49,Population,414,480,36,9,8,3,0,2,-1,0,0,0,0-0-0,0-0-0,|||128-0-128,0,0,0,0,0,0
+1,50,49,1,0,0,0,0,0,128,1,-1--1--1,,1|(0,0)|
+1,51,49,45,0,0,45,0,0,128,0,-1--1--1,,1|(0,0)|
+10,52,Population,1421,693,44,9,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+10,53,Indicated Death Rate,1313,648,39,16,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,54,53,21,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,55,52,53,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,56,Time to reduce risk,1331,898,37,16,8,3,0,2,-1,0,0,0,0-0-0,0-0-0,|||255-0-0,0,0,0,0,0,0
+10,57,Patient Zero Arrival Time,782,250,41,16,8,131,0,2,-1,0,0,0,0-0-0,0-0-0,|||255-0-0,0,0,0,0,0,0
+11,58,0,879,375,8,7,33,3,0,0,2,0,0,0,0,0,0,0,0,0
+10,59,Patient Zero Arrival,830,375,41,16,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,60,57,59,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+12,61,48,879,311,25,15,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,62,58,61,100,0,0,22,0,0,0,-1--1--1,,1|(879,347)|
+1,63,58,2,4,0,0,22,0,0,0,-1--1--1,,1|(879,412)|
+10,64,Time,731,347,26,9,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,65,64,59,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,66,TIME STEP,726,306,46,9,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,67,66,59,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,68,PWRisk Gamma,939,847,64,23,8,3,0,2,-1,0,0,0,0-0-0,0-0-0,|||255-0-0,0,0,0,0,0,0
+1,69,68,22,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,70,44,8,0,0,43,0,0,128,0,-1--1--1,,1|(0,0)|
+10,71,Normalized population size,1178,609,50,16,8,3,0,2,-1,0,0,0,0-0-0,0-0-0,|||0-128-0,0,0,0,0,0,0
+1,72,71,53,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,73,Patient zero,868,262,40,9,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,74,73,59,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,75,Time to Perceive Risk,1294,756,59,20,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,76,75,21,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,77,21,75,1,0,0,0,0,64,0,-1--1--1,,1|(1197,732)|
+1,78,53,75,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,79,24,75,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,80,56,75,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,81,Dead,571,613,27,9,8,2,0,2,-1,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+1,82,81,45,0,0,45,0,0,128,0,-1--1--1,,1|(0,0)|
+10,83,Onset DATA WRONG HELP,1113,338,49,23,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,84,83,11,1,0,0,0,0,192,0,-1--1--1,,1|(1110,399)|
+10,85,Switch for process noise,447,345,55,23,8,3,1,2,-1,0,0,0,0-0-0,0-0-0,|||128-128-0,0,0,0,0,0,0
+10,86,ProcessNoiseExposure,636,371,88,23,8,3,1,0,-1,0,0,0,0,0,0,0,0,0
+1,87,86,8,0,1,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,88,Simulated Recovery Data,1429,280,63,23,8,3,1,2,-1,0,0,0,0-0-0,0-0-0,|||255-128-0,0,0,0,0,0,0
+12,89,0,2127,382,389,231,8,79,0,0,1,0,0,0,0,0,0,0,0,0
+SEIR
+12,90,0,2126,1000,445,309,8,79,0,0,2,0,0,0,0,0,0,0,0,0
+exposure,Graph
+10,91,Normalized Estimated Parameters,750,1072,46,23,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,92,Parameter Upper Bounds,1066,1120,56,23,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,93,Parameter Lower Bounds,1302,1026,56,23,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+12,94,0,2971,265,341,230,8,79,0,0,2,0,0,0,0,0,0,0,0,0
+Dead[States],Graph
+10,95,Simulated Onset Data,1038,224,63,23,8,3,0,2,-1,0,0,0,0-0-0,0-0-0,|||255-128-0,0,0,0,0,0,0
+1,96,11,95,1,0,0,0,0,192,0,-1--1--1,,1|(1060,289)|
+10,97,Simulated Death Rate Data,1446,639,63,23,8,3,0,2,-1,0,0,0,0-0-0,0-0-0,|||255-128-0,0,0,0,0,0,0
+1,98,36,97,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+10,99,Recovery Measurement Noise Scale,1612,339,66,24,8,3,0,2,-1,0,0,0,0-0-0,0-0-0,|||255-0-0,0,0,0,0,0,0
+1,100,99,88,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,101,NSeed,1339,213,36,9,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,102,101,88,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,103,32,88,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,104,Death Measurement Noise Scale,1616,651,46,24,8,3,0,2,-1,0,0,0,0-0-0,0-0-0,|||255-0-0,0,0,0,0,0,0
+1,105,104,97,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,106,101,97,1,0,0,0,0,64,0,-1--1--1,,1|(1690,344)|
+1,107,101,95,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,108,Onset Measurement Noise Scale,903,154,46,24,8,3,0,2,-1,0,0,0,0-0-0,0-0-0,|||255-0-0,0,0,0,0,0,0
+1,109,108,95,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,110,AutoCrr Noise 1,639,58,34,23,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+12,111,48,434,64,25,15,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,112,White Noise 1,361,180,53,19,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,113,Noise Standard Deviation 1,300,285,52,16,8,3,0,2,0,0,0,0,0-0-0,0-0-0,|||251-2-7,0,0,0,0,0,0
+11,114,0,533,64,6,8,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,115,Change in Auto Noise 1,533,88,52,16,40,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,116,Noise Correlation Time 1,313,53,58,16,8,3,0,2,0,0,0,0,0-0-0,0-0-0,|||251-2-7,0,0,0,0,0,0
+1,117,114,110,4,0,0,22,0,0,0,-1--1--1,,1|(572,64)|
+1,118,114,111,100,0,0,22,0,0,0,-1--1--1,,1|(493,64)|
+1,119,110,114,2,0,0,0,0,0,0,-1--1--1,,1|(597,13)|
+1,120,112,115,2,0,0,0,0,0,0,-1--1--1,,1|(438,143)|
+1,121,116,115,2,0,0,0,0,0,0,-1--1--1,,1|(428,99)|
+1,122,116,112,1,0,0,0,0,0,0,-1--1--1,,1|(303,139)|
+1,123,113,112,1,0,0,0,0,0,0,-1--1--1,,1|(342,223)|
+1,124,101,112,1,0,0,0,0,64,0,-1--1--1,,1|(886,107)|
+10,125,TIME STEP,166,180,46,9,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,126,125,112,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,127,110,86,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,128,85,86,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,129,97,53,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+12,130,0,3001,891,401,396,8,15,0,0,1,0,0,0,0,0,0,0,0,0
+GRAPH
+///---\\\
+:GRAPH SEIR
+:TITLE SEIR
+:X-AXIS Time
+:SCALE
+:VAR E
+:DATASET 
+:SCALE
+:VAR I
+:DATASET 
+:SCALE
+:VAR S
+:DATASET 
+:SCALE
+:VAR Recovered
+:DATASET 
+:SCALE
+:VAR Dead
+:DATASET 
+
+:GRAPH GRAPH
+:TITLE Data Outputs 
+:SCALE
+:VAR Simulated Death Rate Data
+:DATASET 
+:SCALE
+:VAR Simulated Onset Data
+:DATASET 
+:VAR Simulated Recovery Data
+:DATASET 
+:L<%^E!@
+1:Test3.vdfx
+4:Time
+5:exposure[States]
+6:IFRt
+6:s1
+9:Test3
+19:74,0
+24:0
+25:600
+26:600
+23:0
+15:0,0,0,0,0,0
+27:0,
+34:0,
+42:1
+72:0
+73:0
+35:Date
+36:YYYY-MM-DD
+37:2000
+38:1
+39:1
+40:2
+41:0
+95:0
+96:0
+97:0
+77:0
+78:0
+102:0
+93:0
+94:0
+92:0
+91:0
+90:0
+87:0
+75:
+43:
+103:8,8,8,3,8
+105:0,0,0,0,0,0,0,0,0,0
+104:Arial|12||0-0-0|0-0-0|-1--1--1|0-0-255|192-192-192|-1--1--1

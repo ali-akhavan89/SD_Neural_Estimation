@@ -3,7 +3,7 @@ You can find all the codes and models from the link below:
 
 https://github.com/ali-akhavan89/SD_Neural_Estimation 
 
-To run the scripts, you need to have Vensim DSS, Python, and relevant Python packages installed on your computer. Note that some functionalities, like DLL, are not available on macOS and, on Windows, require administrative permissions to be installed and used. Below are the general instructions, which may need some minor adjustments if you are on macOS. Follow these instructions to install the necessary packages:
+To run the scripts, you need to have Vensim DSS, Python, and relevant Python libraries and packages installed on your computer. Note that some functionalities, like DLL, are not available on macOS and, on Windows, require administrative permissions to be installed and used. Below are the general instructions, which may need some minor adjustments if you are on macOS. Follow these instructions to install the necessary packages:
 
 
 
@@ -13,7 +13,7 @@ https://docs.anaconda.com/free/miniconda/
 
 2.	Open a Command Prompt or a Terminal window connected to Conda
 
-3.	Install BayesFlow and related packages with the command:
+3.	Install BayesFlow and related libraries with the command:
 
 ```python 
 pip install bayesflow
